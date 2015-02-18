@@ -1,0 +1,32 @@
+#!/bin/bash
+
+trap "printf Exited on Ctrl-C!; exit;" SIGINT SIGTERM
+
+#1# first time run 'nmap -sn 192.168.0.1-50' to find mac address and device name shown in nmap o/p
+bbb_dev_id="Unknown"
+bbb_mac_addr="78:A5:04:CE:29:CD"
+
+#2# finding ip addr prefix (not using netmask, assuming 255.255.255.0)
+myip=`ifconfig | egrep -A 3 "eth0|wlan0" | grep  "inet addr" | head -1 | awk '{print $2}' | awk -F":" '{print $2}'`
+m=(`ifconfig | egrep -A 3 "eth0|wlan0" | grep  "inet addr" | head -1 | awk '{print $4}' | awk -F":" '{print $2}' | awk -F"." '{print $1" "$2" "$3" "$4}'`)
+mlen=`awk 'BEGIN{n = 2**24 * '"${m[0]}"' + 2**16 * '"${m[1]}"' + 2**8 * '"${m[2]}"' +  2**0 * '"${m[3]}"' ; for(i=0;i<32;i++){if(rshift(n,i) % 2 !=0){print 32 - i; break} }}'`
+
+#3# running nmap to find ip addr of device whose id and mac addr are configured at the beginning
+if hash nmap 2> /dev/null; then
+    printf "\nscanning local network with command nmap -sn $myip"/"$mlen\n"
+    bbb_ip=`sudo nmap -sn $myip"/"$mlen | \
+            awk 'BEGIN{dev="";mac=""} \
+                {if($1~/^Nmap/){ip=$NF} if($1~/^MAC/){mac=$3;dev=$NF} \
+                if((dev~/'"$bbb_dev_id"'/)||(mac~/'"$bbb_mac_addr"'/)){bbb_ip=ip;dev="";mac=""}}END{print bbb_ip}'` 
+
+    if [ -z $bbb_ip ]; then
+        printf "\ndevice with mac $bbb_mac_addr doesn't seem to be on network!\n"
+    else
+        printf "\nconnecting board on $bbb_ip\n"
+        ssh root@$bbb_ip
+    fi
+else
+    printf "\nnmap is not installed, plz install before running the script. \nIf you are on Debian/Ubuntu run 'sudo apt-get install nmap'\n\n"
+    exit
+fi
+
