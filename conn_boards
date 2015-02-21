@@ -2,23 +2,29 @@
 
 trap "printf Exited on Ctrl-C!; exit;" SIGINT SIGTERM
 
+# gnu awk required
+if ! hash gawk 2> /dev/null  ; then
+    printf "gawk program is required for script to run. if you are on debian/ubuntu run sudo apt-get install gawk\n"
+    exit
+fi
+
 #1# known mac addr (can find on device or run 'nmap -sn 192.168.0.0/24' to find
 known_macs="78:A5:04:CE:29:CD B8:27:EB:3A:E2:46 50:56:63:C7:1C:44" # bbb bb pi
 
 #2# finding ip addr prefix (not using netmask, assuming 255.255.255.0)
-myip=`ifconfig | egrep -A 3 "eth0|wlan0" | grep  "inet addr" | head -1 | awk '{print $2}' | awk -F":" '{print $2}'`
-m=(`ifconfig | egrep -A 3 "eth0|wlan0" | grep  "inet addr" | head -1 | awk '{print $4}' | awk -F":" '{print $2}' | awk -F"." '{print $1" "$2" "$3" "$4}'`)
-mlen=`awk 'BEGIN{n = 2^24 * '"${m[0]}"' + 2^16 * '"${m[1]}"' + 2^8 * '"${m[2]}"' +  2^0 * '"${m[3]}"' ; for(i=0;i<32;i++){if(rshift(n,i) % 2 !=0){print 32 - i; break} }}'`
+myip=`ifconfig | egrep -A 3 "eth0|wlan0" | grep  "inet addr" | head -1 | gawk '{print $2}' | gawk -F":" '{print $2}'`
+m=(`ifconfig | egrep -A 3 "eth0|wlan0" | grep  "inet addr" | head -1 | gawk '{print $4}' | gawk -F":" '{print $2}' | gawk -F"." '{print $1" "$2" "$3" "$4}'`)
+mlen=`gawk 'BEGIN{n = 2^24 * '"${m[0]}"' + 2^16 * '"${m[1]}"' + 2^8 * '"${m[2]}"' +  2^0 * '"${m[3]}"' ; for(i=0;i<32;i++){if(rshift(n,i) % 2 !=0){print 32 - i; break} }}'`
 
 #3# running nmap to find ip addr of device whose id and mac addr are configured at the beginning
 if hash nmap 2> /dev/null; then
     printf "\nscanning local network with command nmap -sn $myip"/"$mlen\n"
     sudo nmap -sn $myip"/"$mlen > tmp_nmap_op 
     
-    awk '{ if($1~/^Nmap/){if(f==0){ip=$NF;f=1}else{print ip,mac,id;ip=$NF;mac="";id=""}} if($1~/^MAC/){mac=$3;id=$4;for(i=5;i<=NF;i++){id=id"_"$i }}}' tmp_nmap_op > tmp_nmap_op_fil1
-    ips=(`awk '{print $1}' tmp_nmap_op_fil1`)
-    awk '{if("'"$known_macs"'"~$2) {if($2!=""){print $0 " --> Known_Device"}} else{print $0} }' tmp_nmap_op_fil1 > tmp_nmap_op_fil2
-    awk 'BEGIN{cnt=0}{cnt++; print cnt" "$0}END{print "above "cnt" devices avilable select one to login. enter number between [1-"cnt"], enter 0 to exit"}' tmp_nmap_op_fil2
+    gawk '{ if($1~/^Nmap/){if(f==0){ip=$NF;f=1}else{print ip,mac,id;ip=$NF;mac="";id=""}} if($1~/^MAC/){mac=$3;id=$4;for(i=5;i<=NF;i++){id=id"_"$i }}}' tmp_nmap_op > tmp_nmap_op_fil1
+    ips=(`gawk '{print $1}' tmp_nmap_op_fil1`)
+    gawk '{if("'"$known_macs"'"~$2) {if($2!=""){print $0 " --> Known_Device"}} else{print $0} }' tmp_nmap_op_fil1 > tmp_nmap_op_fil2
+    gawk 'BEGIN{cnt=0}{cnt++; print cnt" "$0}END{print "above "cnt" devices avilable select one to login. enter number between [1-"cnt"], enter 0 to exit"}' tmp_nmap_op_fil2
     read ip_index
     if [ $ip_index != 0 ]; then
         ip_index=` expr $ip_index - 1`
