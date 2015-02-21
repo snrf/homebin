@@ -8,7 +8,7 @@ known_macs="78:A5:04:CE:29:CD B8:27:EB:3A:E2:46 50:56:63:C7:1C:44" # bbb bb pi
 #2# finding ip addr prefix (not using netmask, assuming 255.255.255.0)
 myip=`ifconfig | egrep -A 3 "eth0|wlan0" | grep  "inet addr" | head -1 | awk '{print $2}' | awk -F":" '{print $2}'`
 m=(`ifconfig | egrep -A 3 "eth0|wlan0" | grep  "inet addr" | head -1 | awk '{print $4}' | awk -F":" '{print $2}' | awk -F"." '{print $1" "$2" "$3" "$4}'`)
-mlen=`awk 'BEGIN{n = 2**24 * '"${m[0]}"' + 2**16 * '"${m[1]}"' + 2**8 * '"${m[2]}"' +  2**0 * '"${m[3]}"' ; for(i=0;i<32;i++){if(rshift(n,i) % 2 !=0){print 32 - i; break} }}'`
+mlen=`awk 'BEGIN{n = 2^24 * '"${m[0]}"' + 2^16 * '"${m[1]}"' + 2^8 * '"${m[2]}"' +  2^0 * '"${m[3]}"' ; for(i=0;i<32;i++){if(rshift(n,i) % 2 !=0){print 32 - i; break} }}'`
 
 #3# running nmap to find ip addr of device whose id and mac addr are configured at the beginning
 if hash nmap 2> /dev/null; then
