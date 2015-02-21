@@ -1,0 +1,16 @@
+#!/bin/bash
+
+trap "printf Exited on Ctrl-C!; exit;" SIGINT SIGTERM
+
+timestamp=`date "+%Y_%h_%d_%H_%M_%S"`
+currdir=`pwd`
+
+for f in ".vimrc" ".bash_aliases"
+do
+    if [ -f ~/$f ]; then
+        mv ~/$f ~/$f"."$timestamp
+    fi
+    ln -s $currdir/$f ~/$f
+done
+printf "\n"
+
